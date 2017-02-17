@@ -29,7 +29,6 @@ Output array having size of blockNum need to add togeter to get a final answer.
 void reduceSumPerBlock(int* d_output, int* d_input, int sizeOfInput, int blockNum)
 {
 	d_reduceSum << <blockNum, Block_Size, Block_Size * sizeof(int) >> > (d_input, d_output, sizeOfInput);
-	cudaDeviceSynchronize();
 }
 
 void reduceSumIter(int* d_output, int* d_input, int sizeOfInput, int blockNum)
@@ -48,7 +47,7 @@ void prefixSumReCur(int* d_output, int* d_input, int sizeOfInput)
 {
 	unsigned int blockNum = sizeOfInput / Block_Size;
 	if (blockNum * Block_Size < sizeOfInput)blockNum++;
-	prescan << <blockNum, Block_Size, Block_Size * sizeof(int) >> > (d_output, d_input, sizeOfInput); cudaDeviceSynchronize();
+	prescan << <blockNum, Block_Size, Block_Size * sizeof(int) >> > (d_output, d_input, sizeOfInput); //cudaDeviceSynchronize();
 	if (blockNum == 1)return;
 	else
 	{
@@ -58,9 +57,9 @@ void prefixSumReCur(int* d_output, int* d_input, int sizeOfInput)
 		cudaMalloc(&d_auxiliaryOutput, blockNum * sizeof(int));
 		int auxiliaryBlock = blockNum / Block_Size;
 		if (auxiliaryBlock*Block_Size < blockNum)auxiliaryBlock++;
-		formAuxiliary << <auxiliaryBlock, Block_Size >> > (d_auxiliaryInput, d_output, d_input, blockNum); cudaDeviceSynchronize();
+		formAuxiliary << <auxiliaryBlock, Block_Size >> > (d_auxiliaryInput, d_output, d_input, blockNum); //cudaDeviceSynchronize();
 		prefixSumReCur(d_auxiliaryOutput, d_auxiliaryInput, blockNum);
-		addAuxiliary << <blockNum, Block_Size >> > (d_output, d_auxiliaryOutput); cudaDeviceSynchronize();
+		addAuxiliary << <blockNum, Block_Size >> > (d_output, d_auxiliaryOutput); //cudaDeviceSynchronize();
 		cudaFree(d_auxiliaryInput);
 		cudaFree(d_auxiliaryOutput);
 	}
@@ -79,7 +78,7 @@ void histogramLocal(int* d_output, int* d_input, int sizeOfInput, int histogramS
 	unsigned int gridSize = blockNum*Block_Size;
 	cudaMalloc(&d_temp, histogramSize * gridSize * sizeof(int));
 	d_histogram << <blockNum, Block_Size >> > (d_input, d_temp, sizeOfInput, histogramSize, gap);
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 	for (int i = 0; i < histogramSize; i++)
 		reduceSumIter(d_output + i , d_temp + i * gridSize, gridSize, blockNum);
 	cudaFree(d_temp);

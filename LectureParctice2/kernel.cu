@@ -12,8 +12,8 @@
 using namespace std;
 float cpu_time = 0;
 float gpu_time = 0;
-int times = 40;
-int size1 = 60000000;
+int times = 1;
+int size1 = 2000000;
 int* randNumbers;
 
 int reduceSum(int* input, int sizeOfInput)
@@ -74,6 +74,8 @@ void radixsort(int* h_output, int* input, int sizeOfInput)
 	cudaFree(d_input);
 }
 
+#pragma region cpu libary
+
 //cpu libary
 
 int maxbit(int data[], int n) //辅助函数，求数据的最大位数
@@ -128,6 +130,10 @@ void radixsortCPU(int data[], int n) //基数排序
 	delete[]count;
 }
 
+#pragma endregion
+
+#pragma region single test
+
 //single test comparing cpu & gpu speed one time.
 
 void ParallelReduceSumTest()
@@ -160,7 +166,7 @@ void ParallelReduceSumTest()
 	//cout << "GPU Time(ms): " << setw(5) << t2 - t1 << endl;
 	if (maxNum != ans)
 	{
-		cout << "Wrong!" <<endl;
+		cout << "Wrong!" << endl;
 		cout << maxNum << " " << ans << endl;
 	}
 }
@@ -170,10 +176,10 @@ void ParallelPrefixSumTest()
 	clock_t t1;
 	clock_t t2;
 
-	int* cpu_prefix_sum = new int[size1];
-	int* gpu_prefix_sum = new int[size1];
-
-	
+	int* cpu_prefix_sum;
+	int* gpu_prefix_sum;
+	cudaMallocHost(&cpu_prefix_sum, size1 * sizeof(int));
+	cudaMallocHost(&gpu_prefix_sum, size1 * sizeof(int));
 
 	t1 = clock();
 
@@ -181,7 +187,7 @@ void ParallelPrefixSumTest()
 		cpu_prefix_sum[i] = 0;
 	cpu_prefix_sum[0] = randNumbers[0];
 	for (int i = 1; i < size1; i++)
-			cpu_prefix_sum[i] = cpu_prefix_sum[i-1]+randNumbers[i];
+		cpu_prefix_sum[i] = cpu_prefix_sum[i - 1] + randNumbers[i];
 
 	t2 = clock();
 	cpu_time += t2 - t1;
@@ -189,7 +195,7 @@ void ParallelPrefixSumTest()
 
 	t1 = clock();
 
-	prefixSum(gpu_prefix_sum ,randNumbers , size1);
+	prefixSum(gpu_prefix_sum, randNumbers, size1);
 
 	t2 = clock();
 	gpu_time += t2 - t1;
@@ -197,32 +203,35 @@ void ParallelPrefixSumTest()
 
 	for (int i = 1; i < size1; i++)
 	{
-		
-		if (cpu_prefix_sum[i-1] != gpu_prefix_sum[i])
+
+		if (cpu_prefix_sum[i - 1] != gpu_prefix_sum[i])
 		{
-			cout << "Wrong! at " <<i<< endl;
-			cout << cpu_prefix_sum[i-1] <<" "<< gpu_prefix_sum[i] << endl;
-			cout << cpu_prefix_sum[i] << " " << gpu_prefix_sum[i+1] << endl;
-			cout << cpu_prefix_sum[i+1] << " " << gpu_prefix_sum[i+2] << endl;
+			cout << "Wrong! at " << i << endl;
+			cout << cpu_prefix_sum[i - 1] << " " << gpu_prefix_sum[i] << endl;
+			cout << cpu_prefix_sum[i] << " " << gpu_prefix_sum[i + 1] << endl;
+			cout << cpu_prefix_sum[i + 1] << " " << gpu_prefix_sum[i + 2] << endl;
 			break;
 		}
-		
+
 		//cout << cpu_prefix_sum[i] << " " << gpu_prefix_sum[i] << endl;
 	}
-	delete[] cpu_prefix_sum;
-	delete[] gpu_prefix_sum;
+	cudaFreeHost(cpu_prefix_sum);
+	cudaFreeHost(gpu_prefix_sum);
 }
 
 void ParallelHistogramTest(int histogramSize, int gap)
 {
 	clock_t t1;
 	clock_t t2;
-	int* cpu_histogram = new int[histogramSize];
-	int* gpu_histogram = new int[histogramSize];
+
+	int* cpu_histogram;
+	int* gpu_histogram;
+	cudaMallocHost(&cpu_histogram, histogramSize * sizeof(int));
+	cudaMallocHost(&gpu_histogram, histogramSize * sizeof(int));
 
 	for (int i = 0; i < histogramSize; i++)cpu_histogram[i] = 0;
 
-	
+
 
 	t1 = clock();
 
@@ -230,7 +239,7 @@ void ParallelHistogramTest(int histogramSize, int gap)
 	{
 		int j = randNumbers[i] / gap;
 		if (j < histogramSize)cpu_histogram[j]++;
-		else cpu_histogram[histogramSize-1]++;
+		else cpu_histogram[histogramSize - 1]++;
 	}
 
 	t2 = clock();
@@ -257,8 +266,9 @@ void ParallelHistogramTest(int histogramSize, int gap)
 
 		//cout << cpu_histogram[i] << " " << gpu_histogram[i] << endl;
 	}
-	delete[] cpu_histogram;
-	delete[] gpu_histogram;
+
+	cudaFreeHost(cpu_histogram);
+	cudaFreeHost(gpu_histogram);
 }
 
 void ParallelRadixSortTest()
@@ -266,14 +276,16 @@ void ParallelRadixSortTest()
 	clock_t t1;
 	clock_t t2;
 
-	int* cpu_radixSort = new int[size1];
-	int* gpu_radixSort = new int[size1];
+	int* cpu_radixSort;
+	int* gpu_radixSort;
+	cudaMallocHost(&cpu_radixSort, size1 * sizeof(int));
+	cudaMallocHost(&gpu_radixSort, size1 * sizeof(int));
 
 	for (int i = 0; i < size1; i++)cpu_radixSort[i] = randNumbers[i];
 
 	t1 = clock();
 
-	radixsortCPU(cpu_radixSort,size1);
+	radixsortCPU(cpu_radixSort, size1);
 
 	//for (int i = 0; i < size1; i++)cout << cpu_radixSort[i] << endl;
 
@@ -301,9 +313,13 @@ void ParallelRadixSortTest()
 		//cout << cpu_prefix_sum[i] << " " << gpu_prefix_sum[i] << endl;
 	}
 
-	delete[] cpu_radixSort;
-	delete[] gpu_radixSort;
+	cudaFreeHost(cpu_radixSort);
+	cudaFreeHost(gpu_radixSort);
 }
+
+#pragma endregion
+
+#pragma region Test Repeatly
 
 //do lots of test comparing cpu & gpu average speed.
 
@@ -367,6 +383,10 @@ void ParallelRadixSortTestRepeatly()
 	cout << cpu_time << " " << gpu_time << endl;
 }
 
+#pragma endregion
+
+
+
 //Code Entrance
 
 int main()
@@ -391,6 +411,6 @@ int main()
 	/*
 	ParallelRadixSortTestRepeatly();
 	*/
-	system("pause");
+	//system("pause");
 	return 0;
 }
