@@ -12,8 +12,8 @@
 using namespace std;
 float cpu_time = 0;
 float gpu_time = 0;
-int times = 1;
-int size1 = 2000000;
+int times = 40;
+int size1 = 60000000;
 int* randNumbers;
 
 int reduceSum(int* input, int sizeOfInput)
